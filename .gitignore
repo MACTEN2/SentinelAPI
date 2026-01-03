@@ -1,0 +1,15 @@
+# Java - Ignore compiled class files
+*.class
+
+# Ignore the build output folder
+out/
+
+# Docker - Ignore local logs and temporary data
+*.log
+.docker/
+
+# IDE - Ignore project settings (keeps your repo clean for others)
+.idea/
+.vscode/
+*.iml
+.DS_Store
