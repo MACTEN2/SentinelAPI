@@ -63,20 +63,7 @@ Packaged with Docker for platform independence, supporting both **Intel/AMD** an
    ```bash
    git clone [https://github.com/YOUR_USERNAME/SentinelAPI.git](https://github.com/YOUR_USERNAME/SentinelAPI.git)
    cd SentinelAPI
-
-## Compile the Source:
-javac -d out src/main/java/com/sentinel/api/**/*.java
-
-## Build the Docker Container:
-docker build -t sentinel-api .
-
-## Run the Platform:
-docker run -d -p 8080:8080 --name sentinel-server sentinel-api
-
-### Testing the Security
-## Authorized Request:
-curl -i -H "X-API-KEY: sentinel-secret-2026" http://localhost:8080
-
+   
 ## Blocked Request (Invalid Key):
 curl -i http://localhost:8080
 📈 Future Roadmap
