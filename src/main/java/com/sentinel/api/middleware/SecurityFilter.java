@@ -1,6 +1,6 @@
 package com.sentinel.api.middleware;
 
-import com.sentinel.api.config.SentinelLogger; // Import the logger
+import com.sentinel.api.config.SentinelLogger;
 import com.sun.net.httpserver.Filter;
 import com.sun.net.httpserver.HttpExchange;
 import java.io.IOException;
@@ -14,18 +14,22 @@ public class SecurityFilter extends Filter {
         String method = exchange.getRequestMethod();
         String path = exchange.getRequestURI().getPath();
 
-        // 1. Security Headers
+        // 1. Inject Security Headers
         exchange.getResponseHeaders().add("X-Content-Type-Options", "nosniff");
+        exchange.getResponseHeaders().add("X-Frame-Options", "DENY");
 
-        // 2. Auth Logic
+        // 2. Authentication Logic
         String apiKey = exchange.getRequestHeaders().getFirst("X-API-KEY");
 
         if (apiKey != null && apiKey.equals(VALID_API_KEY)) {
-            SentinelLogger.logRequest(method, path, ip, 200, "Authorized Access");
+            // Updated to use .log() with correct parameter order
+            SentinelLogger.log(ip, method, path, 200, "Authorized Access");
             chain.doFilter(exchange);
         } else {
-            SentinelLogger.logRequest(method, path, ip, 401, "Unauthorized Attempt - Blocked");
-            String error = "401 Unauthorized";
+            // Updated to use .log() with correct parameter order
+            SentinelLogger.log(ip, method, path, 401, "Unauthorized Attempt - Blocked");
+            
+            String error = "401 Unauthorized - Valid API Key Required";
             exchange.sendResponseHeaders(401, error.length());
             exchange.getResponseBody().write(error.getBytes());
             exchange.getResponseBody().close();
