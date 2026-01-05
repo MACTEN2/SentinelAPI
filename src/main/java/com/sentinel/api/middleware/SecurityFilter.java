@@ -22,17 +22,33 @@ public class SecurityFilter extends Filter {
         String apiKey = exchange.getRequestHeaders().getFirst("X-API-KEY");
 
         if (apiKey != null && apiKey.equals(VALID_API_KEY)) {
-            // Updated to use .log() with correct parameter order
             SentinelLogger.log(ip, method, path, 200, "Authorized Access");
             chain.doFilter(exchange);
         } else {
-            // Updated to use .log() with correct parameter order
             SentinelLogger.log(ip, method, path, 401, "Unauthorized Attempt - Blocked");
+
+            // Define the "Access Denied" HTML with a GIF
+            String deniedHtml = "<html><head><style>" +
+                "body { background-color: black; color: red; font-family: 'Courier New', Courier, monospace; text-align: center; padding-top: 50px; }" +
+                "img { width: 400px; border: 5px solid red; border-radius: 10px; margin-bottom: 20px; }" +
+                "h1 { font-size: 3rem; text-transform: uppercase; letter-spacing: 5px; }" +
+                ".warning { color: white; font-size: 1.2rem; }" +
+                "</style></head><body>" +
+                "<h1>ACCESS DENIED</h1>" +
+                // You can replace this URL with any GIF you prefer
+                "<img src='https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGJueW94ZXB6ZzR0eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHgmZXA9djFfaW50ZXJuYWxfZ2lmX2J5X2lkJmN0PWc/jgVXeRc9Jdfa0/giphy.gif' alt='Access Denied'>" +
+                "<p class='warning'>SECURITY BREACH DETECTED: UNIDENTIFIED API KEY</p>" +
+                "<p>Your IP: " + ip + " has been logged by SentinelAPI.</p>" +
+                "</body></html>";
+
+            // Set headers to HTML
+            exchange.getResponseHeaders().set("Content-Type", "text/html");
+            byte[] responseBytes = deniedHtml.getBytes();
+            exchange.sendResponseHeaders(401, responseBytes.length);
             
-            String error = "401 Unauthorized - Valid API Key Required";
-            exchange.sendResponseHeaders(401, error.length());
-            exchange.getResponseBody().write(error.getBytes());
-            exchange.getResponseBody().close();
+            OutputStream os = exchange.getResponseBody();
+            os.write(responseBytes);
+            os.close();
         }
     }
 
