@@ -4,21 +4,138 @@
     <title>Sentinel | Command Center</title>
     <style>
         body { background: #0a0a0a; color: #00ff00; font-family: 'Courier New', monospace; padding: 50px; }
-        .terminal { border: 1px solid #00ff00; padding: 20px; background: #000; box-shadow: 0 0 15px #00ff00; }
-        h1 { border-bottom: 2px solid #00ff00; padding-bottom: 10px; }
-        .data-row { margin: 10px 0; color: #88ff88; }
+        .terminal { border: 1px solid #00ff00; padding: 20px; background: #000; box-shadow: 0 0 15px #00ff00; position: relative; }
+        h1 { border-bottom: 2px solid #00ff00; padding-bottom: 10px; text-transform: uppercase; }
+        .data-row { margin: 10px 0; color: #88ff88; font-size: 1.1rem; }
         .pulse { animation: blink 1s infinite; }
+        
+        /* Stats Box Styling */
+        .stats-box { 
+            margin-top: 30px; 
+            border: 1px dashed #00ff00; 
+            padding: 15px; 
+            background: rgba(0, 255, 0, 0.05);
+        }
+        .stat-val { color: #fff; font-weight: bold; }
+        .threat-alert { color: #ff3333; font-weight: bold; }
+
+        /* Action Buttons */
+        .btn-group { margin-top: 25px; display: flex; gap: 15px; }
+        button { 
+            background: transparent; 
+            border: 1px solid #00ff00; 
+            color: #00ff00; 
+            padding: 10px 15px; 
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover { background: #00ff00; color: #000; }
+        button.danger { border-color: #ff3333; color: #ff3333; }
+        button.danger:hover { background: #ff3333; color: #000; }
+
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } }
     </style>
 </head>
 <body>
     <div class="terminal">
         <h1>[ CLASSIFIED COMMAND CENTER ]</h1>
-        <p class="data-row">> ACCESS LEVEL: ALPHA-SENTINEL</p>
-        <p class="data-row">> STATUS: ALL SYSTEMS NOMINAL</p>
+        <p class="data-row">> ACCESS LEVEL: <span style="color:white">ALPHA-SENTINEL</span></p>
         <p class="data-row">> UPLINK: ESTABLISHED <span class="pulse">_</span></p>
-        <hr>
-        <p>Welcome back, Admin. Your session is active.</p>
+        
+        <div class="stats-box">
+            <h3>[ LIVE SYSTEM MONITOR ]</h3>
+            <p>> ACTIVE SESSIONS: <span id="users" class="stat-val">0</span></p>
+            <p>> THREATS NEUTRALIZED: <span id="blocks" class="threat-alert">0</span></p>
+            <p>> CPU UPLINK: <span id="load" class="stat-val">NOMINAL</span></p>
+            <p>> BREACH STATUS: <span id="breach" class="stat-val">NONE</span></p>
+        </div>
+
+        <div style="position: absolute; top: 20px; right: 20px; border: 1px solid #00ff00; padding: 10px; font-size: 0.7rem; text-align: right; background: rgba(0,255,0,0.1);">
+            <p style="margin: 0; color: #fff;">AUTHORIZED OPERATOR</p>
+            <p style="margin: 0; font-weight: bold;">ID: {{SESSION_ID}}</p>
+            <div style="width: 100%; height: 2px; background: #00ff00; margin: 5px 0;"></div>
+            <p style="margin: 0;">BIO-SCAN: <span style="color: #88ff88;">VERIFIED</span></p>
+        </div>
+
+        <div class="stats-box" style="border-color: #00ff00;">
+            <h3>[ RECENT INTERCEPTIONS ]</h3>
+            <ul id="ip-list" style="list-style: none; padding: 0; font-size: 0.9rem; color: #ff6666;">
+                <li>Awaiting data...</li>
+            </ul>
+        </div>
+
+        <div class="btn-group">
+            <button onclick="updateStats()">REFRESH DATA</button>
+            <button class="danger" onclick="purgeLogs()">PURGE SECURITY LOGS</button>
+        </div>
+
+        <hr style="margin-top:30px; border: 0.5px solid #333;">
+        <p style="color: #555; font-size: 0.8rem;">SENTINEL OS v1.0.4 | ENCRYPTION: AES-256</p>
     </div>
+
+    <script>
+        // Fetch real-time data from our Java /api/stats endpoint
+        async function updateStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+
+                const blocks = data.total_blocks;
+                const terminal = document.querySelector('.terminal');
+
+                if (blocks > 10) {
+                    terminal.style.boxShadow = "0 0 30px #ff3333";
+                    terminal.style.borderColor = "#ff3333";
+                    document.getElementById('breach').innerText = "CRITICAL";
+                    document.getElementById('breach').style.color = "#ff3333";
+                } else {
+                    terminal.style.boxShadow = "0 0 15px #00ff00";
+                    terminal.style.borderColor = "#00ff00";
+                    document.getElementById('breach').innerText = "STABLE";
+                }
+                
+                document.getElementById('users').innerText = data.active_sessions;
+                document.getElementById('blocks').innerText = data.total_blocks;
+                document.getElementById('load').innerText = data.system_load;
+                document.getElementById('breach').innerText = data.last_breach;
+
+                //Renders IP history
+                const list = document.getElementById('ip-list');
+                list.innerHTML = ""; // Clear old data
+                if (data.history.length === 0) {
+                    list.innerHTML = "<li>NO RECENT THREATS</li>";
+                } else {
+                    data.history.forEach(ip => {
+                        const li = document.createElement('li');
+                        li.innerText = `> BLOCKED ATTEMPT FROM: ${ip}`;
+                        list.appendChild(li);
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to fetch system stats.");
+            }
+        }
+
+        // Call the new Purge endpoint we added to SentinelServer
+        async function purgeLogs() {
+            if (confirm("WARNING: Irreversible action. Clear all security logs?")) {
+                try {
+                    const response = await fetch('/api/purge-logs');
+                    const data = await response.json();
+                    alert(data.message);
+                    updateStats(); // Refresh numbers to show 0
+                } catch (err) {
+                    alert("System error during purge.");
+                }
+            }
+        }
+
+        // Auto-refresh stats every 5 seconds
+        setInterval(updateStats, 5000);
+        
+        // Initial load
+        window.onload = updateStats;
+    </script>
 </body>
 </html>
