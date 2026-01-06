@@ -4,51 +4,137 @@
     <meta charset="UTF-8">
     <title>SentinelAPI | Gateway</title>
     <style>
-        body { font-family: 'Courier New', monospace; background: #0a0a0a; color: #00ff99; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { border: 2px solid #00ff99; padding: 2.5rem; border-radius: 15px; box-shadow: 0 0 30px rgba(0,255,153,0.3); text-align: center; background: #121212; }
-        h1 { color: #fff; text-transform: uppercase; letter-spacing: 3px; }
-        button { background: transparent; border: 2px solid #00ff99; color: #00ff99; padding: 10px 20px; font-size: 1.1rem; cursor: pointer; transition: 0.3s; margin-top: 20px; border-radius: 5px; }
-        button:hover { background: #00ff99; color: #000; box-shadow: 0 0 15px #00ff99; }
-        #status-msg { margin-top: 15px; font-size: 0.9rem; color: #888; }
+        body { 
+            font-family: 'Courier New', monospace; 
+            background: #0a0a0a; 
+            color: #00ff99; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+            overflow: hidden;
+        }
+        .card { 
+            border: 2px solid #00ff99; 
+            padding: 2.5rem; 
+            border-radius: 15px; 
+            box-shadow: 0 0 30px rgba(0,255,153,0.3); 
+            text-align: center; 
+            background: #121212;
+            max-width: 400px;
+        }
+        h1 { color: #fff; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 5px; }
+        .version { font-size: 0.7rem; color: #444; margin-bottom: 20px; }
+        
+        button { 
+            background: transparent; 
+            border: 2px solid #00ff99; 
+            color: #00ff99; 
+            padding: 12px 24px; 
+            font-size: 1rem; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            margin-top: 20px; 
+            border-radius: 5px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        button:hover { 
+            background: #00ff99; 
+            color: #000; 
+            box-shadow: 0 0 20px #00ff99; 
+        }
+        button:disabled {
+            border-color: #333;
+            color: #333;
+            cursor: not-allowed;
+        }
+
+        #status-msg { 
+            margin-top: 20px; 
+            font-size: 0.85rem; 
+            color: #888; 
+            height: 20px;
+        }
+
+        /* Subtle scanline effect */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
     <div class="card">
         <h1>🛡️ Sentinel Gateway</h1>
-        <p>Security Status: <span style="color:white">READY</span></p>
-        <button onclick="attemptLogin()">INITIATE SYSTEM LOGIN</button>
-        <div id="status-msg">Awaiting credentials...</div>
+        <div class="version">v1.0.4 - SECURE UPLINK</div>
+        <p>Security Status: <span id="security-state" style="color:white">READY</span></p>
+        
+        <button id="login-btn" onclick="attemptLogin()">INITIATE SYSTEM LOGIN</button>
+        
+        <div id="status-msg">Awaiting user authorization...</div>
     </div>
 
     <script>
+        // Sound effects
+        const accessSound = new Audio('https://www.soundjay.com/buttons/button-09a.mp3');
+        const errorSound = new Audio('https://www.soundjay.com/buttons/button-10.mp3');
+
         async function attemptLogin() {
             const msg = document.getElementById('status-msg');
-            msg.innerText = "Requesting Token...";
+            const btn = document.getElementById('login-btn');
+            const state = document.getElementById('security-state');
+
+            // UI Feedback
+            btn.disabled = true;
+            msg.innerText = "REQUESTING ACCESS TOKEN...";
+            msg.style.color = "#888";
 
             try {
-                // 1. Get the Token from our Login API
+                // 1. Fetch the JWT Token
                 const response = await fetch('/api/login');
                 const data = await response.json();
                 
                 if (data.token) {
-                    msg.innerText = "Token Acquired. Redirecting...";
-                    
-                    // 2. Open the Secret Page in a new window/tab, passing the token
-                    // Since we can't easily set headers on a direct page click, 
-                    // we fetch the page manually using the token.
-                    
-                    const secretResponse = await fetch('/api/status', {
-                        headers: { 'Authorization': 'Bearer ' + data.token }
-                    });
-                    
-                    const html = await secretResponse.text();
-                    document.open();
-                    document.write(html);
-                    document.close();
+                    // Success UI
+                    accessSound.play();
+                    state.innerText = "AUTHENTICATED";
+                    state.style.color = "#00ff99";
+                    msg.innerText = "TOKEN ACQUIRED. DECRYPTING CHANNEL...";
+                    msg.style.color = "#00ff99";
+
+                    // 2. Wait 1 second for "Realism" then fetch the Secret Page
+                    setTimeout(async () => {
+                        const secretResponse = await fetch('/api/status', {
+                            headers: { 'Authorization': 'Bearer ' + data.token }
+                        });
+                        
+                        const html = await secretResponse.text();
+                        
+                        // 3. Transform the page into the Command Center
+                        document.open();
+                        document.write(html);
+                        document.close();
+                    }, 1200);
+                } else {
+                    throw new Error("No Token Received");
                 }
+
             } catch (err) {
-                msg.innerText = "CONNECTION ERROR: SERVER OFFLINE";
-                msg.style.color = "red";
+                // Error UI
+                errorSound.play();
+                msg.innerText = "TERMINAL ERROR: UPLINK FAILED";
+                msg.style.color = "#ff4444";
+                state.innerText = "OFFLINE";
+                state.style.color = "#ff4444";
+                btn.disabled = false;
             }
         }
     </script>
