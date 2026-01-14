@@ -52,6 +52,22 @@ Packaged with Docker for platform independence, supporting both **Intel/AMD** an
 
 ---
 
+## Launching the System
+To deploy the server, update the source code, and refresh the containers in one go, run the following command in your terminal:
+
+# Bash
+./deploy.sh
+
+What the Deployment Script Does:
+Environment Cleanup: Stops and removes any existing Sentinel containers to prevent port conflicts.
+
+Java Compilation: Uses the Dockerfile to compile .java source files into bytecode.
+
+Image Synthesis: Builds a fresh Docker image containing the updated resources (HTML, CSS, JS).
+
+Orchestration: Uses Docker Compose to map port 8080, mount the logs/ volume for data persistence, and start the service in detached mode.
+
+
 ## 🚦 Getting Started
 
 ### Prerequisites
